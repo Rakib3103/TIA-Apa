@@ -1,1 +1,1 @@
-APIKEY = 'your-openai-api-key'
+APIKEY = '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'
