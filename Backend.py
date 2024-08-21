@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import os
 import fitz  # PyMuPDF
 from langchain.embeddings import OpenAIEmbeddings
@@ -30,29 +30,40 @@ def extract_text_from_pdf(pdf_path):
     pdf_document.close()
     return text
 
+@app.route('/')
+def index():
+    return render_template('Frontend.html')
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'message': 'No file part'}), 400
+    
     file = request.files['file']
-    if file and file.filename.endswith('.pdf'):
-        filepath = os.path.join('uploads', file.filename)
-        file.save(filepath)
-        text = extract_text_from_pdf(filepath)
-        # Update index with new document
-        document = {"text": text, "source": file.filename}
-        index.add_document(document)
-        return jsonify({"message": "File uploaded and indexed successfully"}), 200
-    return jsonify({"message": "Invalid file format"}), 400
+    if file.filename == '':
+        return jsonify({'message': 'No selected file'}), 400
+    
+    # Save the file to a location
+    file.save(f"./uploads/{file.filename}")
+    
+    # Return a success message or further processing
+    return jsonify({'message': f"File {file.filename} uploaded successfully"}), 200
 
 @app.route('/query', methods=['POST'])
 def query():
     data = request.json
     question = data.get('question')
+    chat_history = data.get('chat_history', [])
+    
     if not question:
         return jsonify({"message": "No question provided"}), 400
 
-    chat_history = data.get('chat_history', [])
-    result = chain({"question": question, "chat_history": chat_history})
-    return jsonify({"answer": result['answer']}), 200
+    try:
+        result = chain({"question": question, "chat_history": chat_history})
+        return jsonify({"answer": result['answer']}), 200
+    except Exception as e:
+        print(f"Error in /query route: {e}")
+        return jsonify({"message": "Error processing the request."}), 500
+
 
 if __name__ == '__main__':
     if not os.path.exists('uploads'):
