@@ -20,18 +20,36 @@
 }
 
 .light-mode {
-  --text-color: #e4e5eb;
-  --icon-color: #a9a9bc;
+  --text-color: #ffffff;  /* Default text color as white */
+  --icon-color: #666668;
   --icon-hover-bg: #f1f1f3;
-  --placeholder-color: #6c6c6c;
+  --placeholder-color: #383838;
   --outgoing-chat-bg: rgb(209, 0, 106);
-  --incoming-chat-bg: rgb(247, 247, 248);
+  --incoming-chat-bg: rgb(255, 255, 255);
   --outgoing-chat-border: #FFFFFF;
   --incoming-chat-border: #D9D9E3;
+  --outgoing-text-color: #ffffff;  /* White text for outgoing chats */
+  --incoming-text-color: #383838; /* Deep grey text for incoming chats */
 }
+
+
+.light-mode .typing-textarea textarea {
+  color: #383838; /* Deep grey color */
+}
+
+
+.chat-container .chat.outgoing .chat-details p {
+  color: var(--outgoing-text-color); /* White text for outgoing chats */
+}
+
+.chat-container .chat.incoming .chat-details p {
+  color: var(--incoming-text-color); /* Deep grey text for incoming chats */
+}
+
 
 body {
   background: var(--outgoing-chat-bg);
+  
 }
 
 /* Chats container styling */
