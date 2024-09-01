@@ -60,9 +60,13 @@ def query():
     try:
         result = chain({"question": question, "chat_history": chat_history})
         return jsonify({"answer": result['answer']}), 200
+    except openai.error.RateLimitError as e:
+        app.logger.warning(f"Rate limit error: {str(e)}")
+        return jsonify({"message": "Rate limit exceeded, please try again later."}), 429
     except Exception as e:
-        print(f"Error in /query route: {e}")
+        app.logger.error(f"Error in /query route: {str(e)}")
         return jsonify({"message": "Error processing the request."}), 500
+
 
 
 if __name__ == '__main__':

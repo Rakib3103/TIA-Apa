@@ -18,7 +18,6 @@ from setuptools import Command
 from setuptools.command import bdist_egg
 from setuptools.command.sdist import sdist, walk_revctrl
 from setuptools.command.setopt import edit_config
-from setuptools.dist import Distribution
 from setuptools.glob import glob
 
 from .. import _entry_points, _normalization
@@ -522,7 +521,6 @@ class FileList(_FileList):
 
 
 class manifest_maker(sdist):
-    distribution: Distribution  # override distutils.dist.Distribution with setuptools.dist.Distribution
     template = "MANIFEST.in"
 
     def initialize_options(self):
@@ -607,16 +605,6 @@ class manifest_maker(sdist):
         for rf in referenced:
             log.debug("adding file referenced by config '%s'", rf)
         self.filelist.extend(referenced)
-
-    def prune_file_list(self):
-        build = self.get_finalized_command('build')
-        base_dir = self.distribution.get_fullname()
-        self.filelist.prune(build.build_base)
-        self.filelist.prune(base_dir)
-        sep = re.escape(os.sep)
-        self.filelist.exclude_pattern(
-            r'(^|' + sep + r')(RCS|CVS|\.svn)' + sep, is_regex=True
-        )
 
     def _safe_data_files(self, build_py):
         """
