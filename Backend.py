@@ -10,12 +10,16 @@ from langchain.chat_models import ChatOpenAI
 import openai
 import constants  # Ensure this has your OpenAI API key
 import dropbox
+from io import BytesIO
+import pytesseract
+from PIL import Image
+import io
 
 app = Flask(__name__)
 os.environ["OPENAI_API_KEY"] = constants.APIKEY
 dbx = dropbox.Dropbox(constants.DROPBOX_ACCESS_TOKEN)
 
-# Initialize model
+# Initialize model and vector store
 embeddings = OpenAIEmbeddings()
 vectorstore = Chroma(embedding_function=embeddings)
 index = VectorStoreIndexWrapper(vectorstore=vectorstore)
@@ -27,13 +31,72 @@ chain = ConversationalRetrievalChain.from_llm(
 # Cache to store responses
 response_cache = {}
 
-def extract_text_from_pdf(pdf_path):
-    pdf_document = fitz.open(pdf_path)
+def extract_text_with_ocr(pdf_document):
+    """Extract text using OCR for image-based PDFs."""
     text = ""
-    for page in pdf_document:
-        text += page.get_text()
-    pdf_document.close()
+    try:
+        for page_number in range(len(pdf_document)):
+            page = pdf_document.load_page(page_number)
+            pix = page.get_pixmap()  # Render page to an image
+            img = Image.open(io.BytesIO(pix.pil_tobytes("jpeg")))
+            page_text = pytesseract.image_to_string(img)
+            print(f"OCR extracted text from page {page_number}: {page_text[:100]}...")  # Log the first 100 characters
+            text += page_text
+    except Exception as e:
+        print(f"Error during OCR extraction: {e}")
     return text
+
+def extract_and_index_text_from_pdf_dropbox(file_path):
+    """Extract text from a PDF stored in Dropbox and index it."""
+    try:
+        # Download the file from Dropbox into memory
+        _, response = dbx.files_download(file_path)
+        file_bytes = BytesIO(response.content)
+
+        # Open the PDF file from bytes in memory
+        pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+        text = ""
+
+        # Extract text from each page
+        for page_number in range(len(pdf_document)):
+            page = pdf_document.load_page(page_number)
+            page_text = page.get_text()
+            print(f"Directly extracted text from page {page_number}: {page_text[:100]}...")  # Log the first 100 characters
+            text += page_text
+
+        # If direct text extraction fails, use OCR
+        if not text.strip():
+            print(f"No direct text found in PDF {file_path}, attempting OCR extraction.")
+            text = extract_text_with_ocr(pdf_document)
+
+        pdf_document.close()
+
+        # Index the extracted text in the vector store
+        if text.strip():
+            vectorstore.add_texts([text])  # Add the extracted text to the vector store
+            print(f"Text indexed successfully from {file_path}")
+        else:
+            print(f"Extracted text is empty for {file_path}")
+
+        return text
+    except Exception as e:
+        print(f"Error extracting text from {file_path}: {e}")
+        return ""
+
+def store_text_in_dropbox(file_path, text):
+    # Convert the text to bytes
+    text_bytes = text.encode('utf-8')
+    
+    # Define a new path for the text file in Dropbox
+    text_file_path = file_path.replace('.pdf', '.txt')
+
+    try:
+        # Upload the text file to Dropbox
+        dbx.files_upload(text_bytes, text_file_path, mode=dropbox.files.WriteMode("overwrite"))
+        print(f"Text successfully uploaded to {text_file_path}")
+    except Exception as e:
+        print(f"Error uploading text file to Dropbox: {e}")
+
 
 @app.route('/')
 def index():
@@ -49,14 +112,29 @@ def upload_file():
         return jsonify({'message': 'No selected file'}), 400
 
     filename = secure_filename(file.filename)
+
     try:
         # Save the file directly to Dropbox
         file_path = f'/uploads/{filename}'  # Path in Dropbox
         dbx.files_upload(file.read(), file_path, mode=dropbox.files.WriteMode("overwrite"))
+
+        # Extract and index text from the uploaded PDF
+        extracted_text = extract_and_index_text_from_pdf_dropbox(file_path)
+        
+        # Store the extracted text back into Dropbox as a .txt file
+        if extracted_text.strip():
+            store_text_in_dropbox(file_path, extracted_text)
+        else:
+            print("Extracted text is blank after processing.")
+
         link = dbx.sharing_create_shared_link_with_settings(file_path)
-        return jsonify({'message': "File uploaded successfully", 'link': link.url}), 200
+        return jsonify({'message': "File uploaded and processed successfully", 'link': link.url}), 200
     except dropbox.exceptions.ApiError as e:
-        return jsonify({'message': 'Failed to upload to Dropbox', 'error': str(e)}), 500
+        print(f"Dropbox API error: {e}")
+        return jsonify({'message': 'Failed to upload or process file on Dropbox', 'error': str(e)}), 500
+    except Exception as e:
+        print(f"General error during file upload: {e}")
+        return jsonify({'message': 'An unexpected error occurred during file upload', 'error': str(e)}), 500
 
 
 @app.route('/query', methods=['POST'])
@@ -73,15 +151,17 @@ def query():
         return jsonify({"answer": response_cache[cache_key]}), 200
 
     try:
-        # Updated to use the new invoke method
+        # Use the retrieval chain to fetch answers based on indexed data
         result = chain.invoke({"question": question, "chat_history": chat_history})
+        print(f"Result from chain: {result}")  # Debugging output
         response_cache[cache_key] = result['answer']  # Store response in cache
         return jsonify({"answer": result['answer']}), 200
     except Exception as e:
         error_message = str(e)
+        print(f"Error during query processing: {error_message}")  # More detailed logging
         if "insufficient_quota" in error_message:
             return jsonify({"message": "API quota exceeded, please try again later."}), 429
-        return jsonify({"message": "Error processing the request."}), 500
+        return jsonify({"message": "Error processing the request.", "error": str(e)}), 500
 
 
 if __name__ == '__main__':
