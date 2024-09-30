@@ -1,0 +1,5 @@
+import os
+
+APIKEY = os.getenv('APIKEY')
+DROPBOX_ACCESS_TOKEN = os.getenv('DROPBOX_ACCESS_TOKEN')
+ASSISTANT_ID = os.getenv('ASSISTANT_ID')
