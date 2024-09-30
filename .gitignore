@@ -1,17 +1,5 @@
-# Ignore virtual environments
-venv/
+# Ignore environment variable files
 .env
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Database files
-*.sqlite3
-
-# Logs
-*.log
-
-# Ignore system-specific files
-.DS_Store
+# Ignore constants file that contains sensitive keys
+constants.py
