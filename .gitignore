@@ -1,1 +1,17 @@
+# Ignore virtual environments
+venv/
 .env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database files
+*.sqlite3
+
+# Logs
+*.log
+
+# Ignore system-specific files
+.DS_Store
