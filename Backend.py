@@ -6,6 +6,9 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.indexes.vectorstore import VectorStoreIndexWrapper
 from langchain.vectorstores import Chroma
 from langchain.chains import ConversationalRetrievalChain
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_community.chat_models import ChatOpenAI
 from langchain.chat_models import ChatOpenAI
 import openai
 import constants  # Ensure this has your OpenAI API key
@@ -14,10 +17,17 @@ from io import BytesIO
 import pytesseract
 from PIL import Image
 import io
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Access environment variables
+APIKEY = os.getenv("APIKEY")
+DROPBOX_ACCESS_TOKEN = os.getenv("DROPBOX_ACCESS_TOKEN")
+ASSISTANT_ID = os.getenv("ASSISTANT_ID")
 app = Flask(__name__)
-os.environ["OPENAI_API_KEY"] = constants.APIKEY
-dbx = dropbox.Dropbox(constants.DROPBOX_ACCESS_TOKEN)
+os.environ["OPENAI_API_KEY"] = APIKEY
+dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 # Initialize model and vector store
 embeddings = OpenAIEmbeddings()
