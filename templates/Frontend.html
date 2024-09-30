@@ -2,13 +2,15 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
-  <title>TIA APA - Climate Change Assistant</title>
+  <title>টিয়া আপা</title>
   <link rel="stylesheet" href="/static/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Google Fonts Link For Icons -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body>
+    <!-- Animated GIF in the top-left -->
+  <img src="static\images\brac logo.png" alt="Animated GIF" class="top-left-gif">
   <!-- Chats container -->
   <div class="chat-container" id="chat-container"></div>
 
@@ -23,11 +25,14 @@
       </form>
       <!-- Text input and send button -->
       <div class="typing-textarea">
-        <textarea id="chat-input" spellcheck="false" placeholder="Enter a prompt here" required></textarea>
+        <textarea id="chat-input" spellcheck="false" placeholder="দয়া করে আপনার সমস্যা লিখুন" required></textarea>
         <span id="send-btn" class="material-symbols-rounded">send</span>
       </div>
       <div class="typing-controls">
-        <span id="theme-btn" class="material-symbols-rounded">light_mode</span>
+        <form id="imageForm" enctype="multipart/form-data">
+          <input type="file" id="image-input" name="image" accept="image/*" style="display: none;" required>
+          <span id="add-btn" class="material-symbols-rounded">add_photo_alternate</span>
+        </form>
         <span id="delete-btn" class="material-symbols-rounded">delete</span>
       </div>
     </div>

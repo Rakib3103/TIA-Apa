@@ -146,22 +146,24 @@ def query():
     if not question:
         return jsonify({"message": "No question provided"}), 400
 
-    cache_key = question + "".join(chat_history)  # Simple cache key
-    if cache_key in response_cache:
-        return jsonify({"answer": response_cache[cache_key]}), 200
-
     try:
-        # Use the retrieval chain to fetch answers based on indexed data
-        result = chain.invoke({"question": question, "chat_history": chat_history})
-        print(f"Result from chain: {result}")  # Debugging output
-        response_cache[cache_key] = result['answer']  # Store response in cache
-        return jsonify({"answer": result['answer']}), 200
+        # Make a request to the OpenAI Chat API with the new syntax
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Specify the model, e.g., gpt-4 or gpt-3.5-turbo
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": question}
+            ],
+            max_tokens=150  # Adjust this based on your needs
+        )
+        
+        # Extract the response content based on the new API structure
+        answer = response.choices[0].message.content
+        return jsonify({"answer": answer}), 200
+
     except Exception as e:
-        error_message = str(e)
-        print(f"Error during query processing: {error_message}")  # More detailed logging
-        if "insufficient_quota" in error_message:
-            return jsonify({"message": "API quota exceeded, please try again later."}), 429
-        return jsonify({"message": "Error processing the request.", "error": str(e)}), 500
+        print(f"Error: {e}")
+        return jsonify({"message": "An unexpected error occurred", "error": str(e)}), 500
 
 
 if __name__ == '__main__':

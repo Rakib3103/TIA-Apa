@@ -1,17 +1,11 @@
 const chatInput = document.querySelector("#chat-input");
 const sendButton = document.querySelector("#send-btn");
 const chatContainer = document.querySelector(".chat-container");
-const themeButton = document.querySelector("#theme-btn");
 const deleteButton = document.querySelector("#delete-btn");
 const uploadButton = document.querySelector("#upload-btn");
 const uploadInput = document.querySelector("#upload-input"); // Corrected ID reference
 
 const loadDataFromLocalStorage = () => {
-    const themeColor = localStorage.getItem("themeColor") || "light_mode";
-
-    document.body.classList.toggle("light-mode", themeColor === "light_mode");
-    themeButton.innerText = themeColor === "light_mode" ? "dark_mode" : "light_mode";
-
     const savedChats = localStorage.getItem("all-chats");
 
     if (savedChats) {
@@ -24,8 +18,8 @@ const loadDataFromLocalStorage = () => {
 
 const showDefaultText = () => {
     const defaultText = `<div class="default-text">
-                            <h1>TIA APA</h1>
-                            <p>Ask anything to APA.<br> Your chat will be displayed here.</p>
+                            <h1>টিয়া আপা</h1>
+                            <p>আপাকে জিজ্ঞেস করুন।<br> আপনার চ্যাট এখানে প্রদর্শিত হবে।</p>
                         </div>`;
     chatContainer.innerHTML = defaultText;
 };
@@ -53,12 +47,12 @@ const sendMessage = async () => {
     chatInput.value = "";
 
     try {
-        const response = await fetch("/query", {  // Changed from /get_response to /query
+        const response = await fetch("/query", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ question: userText, chat_history: [] })
+            body: JSON.stringify({ question: userText, chat_history: [] })  // You can manage chat history here if needed
         });
 
         if (!response.ok) {
@@ -66,8 +60,6 @@ const sendMessage = async () => {
         }
 
         const data = await response.json();
-        console.log("Response from server:", data);
-
         const botResponse = data.answer;
 
         const botChat = createChatElement(`<div class="chat-content">
@@ -92,6 +84,8 @@ const sendMessage = async () => {
         chatContainer.scrollTo(0, chatContainer.scrollHeight);
     }
 };
+
+
 
 const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -147,18 +141,36 @@ const handleFileUpload = async (event) => {
     }
 };
 
+// New image upload handler
+const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imgElement = document.createElement('img');
+        imgElement.src = e.target.result;
+        imgElement.alt = 'Uploaded Image';
+        imgElement.classList.add('chat-image');
+
+        // Create the user chat bubble with the image
+        const userChat = createChatElement(`<div class="chat-content">
+                                                <div class="chat-details">
+                                                    <img src="/static/images/user.jpg" alt="user-img">
+                                                </div>
+                                            </div>`, "outgoing");
+        userChat.querySelector('.chat-details').appendChild(imgElement);
+        chatContainer.appendChild(userChat);
+        chatContainer.scrollTo(0, chatContainer.scrollHeight);
+    };
+    reader.readAsDataURL(file);
+};
+
 const deleteChats = () => {
     if (confirm("Are you sure you want to delete all the chats?")) {
         localStorage.removeItem("all-chats");
         showDefaultText();
     }
-};
-
-const toggleTheme = () => {
-    const themeColor = document.body.classList.contains("light-mode") ? "dark_mode" : "light_mode";
-    document.body.classList.toggle("light-mode");
-    themeButton.innerText = themeColor;
-    localStorage.setItem("themeColor", themeColor);
 };
 
 const handleSendClick = () => {
@@ -175,11 +187,17 @@ const handleKeyDown = (e) => {
 loadDataFromLocalStorage();
 sendButton.addEventListener("click", handleSendClick);
 deleteButton.addEventListener("click", deleteChats);
-themeButton.addEventListener("click", toggleTheme);
 chatInput.addEventListener("keydown", handleKeyDown);
 
 // Handling the upload button click to trigger the file input
 uploadButton.addEventListener("click", () => uploadInput.click());
 
-// Handling the file input change to handle file upload
+// Handling the file input change to handle file upload or image upload
 uploadInput.addEventListener("change", handleFileUpload);
+
+// Image upload button behavior
+document.querySelector("#add-btn").addEventListener("click", () => {
+    document.querySelector("#image-input").click();
+});
+
+document.querySelector("#image-input").addEventListener("change", handleImageUpload);
